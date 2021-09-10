@@ -1,2 +1,5 @@
 # Animations
-Animations made using HTML,CSS and JS
+## Fun animations made using 
+- HTML
+- CSS 
+-  JS
