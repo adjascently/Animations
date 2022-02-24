@@ -1,0 +1,210 @@
+@import 'compass/css3';
+
+//* CUSTOMIZE THESE 4 VALUES */
+$l: 8em; // edge length  of base pentagons
+$linec: white; // wireframe colour
+$lineth: .125em; // wireframe thickness
+$of: .25; // opacity factor of faces
+
+@function central-angle($n) { @return 360deg/$n; }
+
+@function inner-angle($n) { @return ($n - 2)*180deg/$n; }
+
+@function inradius($n, $l) {
+  @return ($l/2)/tan(central-angle($n)/2);
+}
+
+@function circumradius($n, $l) {
+  @return ($l/2)/sin(central-angle($n)/2);
+}
+
+$pyramid-h: $l*sqrt(13 + 22/sqrt(5))/19;
+
+$penta-n: 5;
+$penta-ca: 360deg/$penta-n;
+$penta-a: ($penta-n - 2)*180deg/$penta-n;
+$penta-ri: ($l/2)/tan(central-angle($penta-n)/2);
+$penta-rc: ($l/2)/sin(central-angle($penta-n)/2);
+$penta-h: $penta-ri + $penta-rc;
+$penta-d: $penta-h - $l*cos($penta-a/2);
+
+$tri-n: 3;
+$tri-h: sqrt(pow($pyramid-h, 2) + pow($penta-ri, 2));
+$tri-l: sqrt(pow($tri-h, 2) + pow($l/2, 2));
+
+@function asin($value, $precision: 25) {
+  $coeff: 1;
+  $sum: 0;
+  $flag: 0;
+  $sign: 1;
+  
+  @if $value > 1 {
+    @warn 'Invalid input.';
+    @return false;
+  }
+  
+  @if abs($value) > 1/sqrt(2) {
+    $flag: 1;
+    $sign: $value/abs($value);
+    $value: sqrt(1 - pow($value, 2));
+  }
+  
+  $sum: $sum + $coeff*$value;
+  
+  @for $i from 1 through $precision {
+    $coeff: $coeff*(2*$i - 1)/(2*$i);
+    $sum: $sum + $coeff*pow($value, 2*$i + 1)/(2*$i + 1);
+  }
+  
+  $result: $sign*($flag*pi()/2 + pow(-1, $flag)*$sum);
+  $result: $result*180deg/pi();
+  
+  @return $result;
+}
+
+@function acos($value, $precision: 25) {
+  @return 90deg - asin($value, $precision);
+}
+
+$tri-a: 2*asin(($l/2)/$tri-l);
+$tri-ra: $tri-a/2;
+$tri-sa: abs(90deg - $tri-a);
+$tri-sf: cos($tri-sa);
+
+$pyramid-rax: asin($penta-ri/$tri-h);
+
+$dodeca-n: 12;
+$dodeca-da: acos(-1/sqrt(5));
+$dodeca-rax: 180deg - $dodeca-da;
+$dodeca-h: ($penta-h + $penta-d)*sin($dodeca-rax);
+$dodeca-ri: $dodeca-h/2;
+
+@mixin sp($w, $h: $w) {
+  margin: if($w == $h, -$w/2, -$h/2 (-$w/2));
+  width: $w; height: $h;
+}
+
+html, body { height: 100%; }
+
+body {
+  overflow: hidden;
+  margin: 0;
+  perspective: 4*$l;
+  background: dimgrey;
+  color: $linec;
+}
+
+.polyhedron, .polyhedron *, .polyhedron *:before {
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform-style: preserve-3d;
+}
+
+.polyhedron {
+  transform: rotateY(0deg) rotateX(90deg - $pyramid-rax/2);
+  animation: ani 19s linear infinite;
+}
+
+@keyframes ani {
+  to { 
+    transform: rotateY(360deg) rotateX(90deg - $pyramid-rax/2);
+  }
+}
+
+@for $i from 0 to $dodeca-n {
+  $j: $i%($dodeca-n/2);
+  .polyhedron--pyramid--pentagonal:nth-child(#{$i + 1}) {
+    transform: if($i < $dodeca-n/2, 
+                 rotate(180deg) 
+                 rotateY($penta-ca/2), 
+                 unquote('')) 
+               if($j != 0, 
+                  rotateY(($j - .5)*$penta-ca) 
+                  rotateX($dodeca-rax), 
+                  unquote('')) 
+               translateY(-$dodeca-ri);
+    animation: split#{$i + 1} 16s linear infinite alternate;
+    .polygon:before { 
+      background-color: hsla($i*360/$dodeca-n, 100%, 56%, $of);
+    }
+  }
+  @keyframes split#{$i + 1} {
+    0%, 20% {
+      transform: if($i < $dodeca-n/2, 
+                    rotate(180deg) 
+                    rotateY($penta-ca/2), 
+                    unquote('')) 
+                 if($i%($dodeca-n/2) != 0, 
+                    rotateY(($j - .5)*$penta-ca) 
+                    rotateX($dodeca-rax), 
+                    unquote('')) 
+                 translateY(-$dodeca-ri);
+    }
+    40% {
+      transform: if($i < $dodeca-n/2, 
+                    rotate(180deg) 
+                    rotateY($penta-ca/2), 
+                    unquote('')) 
+                 if($i%($dodeca-n/2) != 0, 
+                    rotateY(($j - .5)*$penta-ca) 
+                    rotateX($dodeca-rax), 
+                    unquote('')) 
+                 translateY(-.75*$dodeca-h);
+    }
+    60% {
+      transform: if($i < $dodeca-n/2, 
+                    rotate(180deg) 
+                    rotateY($penta-ca/2), 
+                    unquote('')) 
+                 if($i%($dodeca-n/2) != 0, 
+                    rotateY(($j - .5)*$penta-ca) 
+                    rotateX($dodeca-rax), 
+                    unquote('')) 
+                 translateY(-.75*$dodeca-h) 
+                 rotate(180deg);
+    }
+    80%, 100% {
+      transform: if($i < $dodeca-n/2, 
+                    rotate(180deg) 
+                    rotateY($penta-ca/2), 
+                    unquote('')) 
+                 if($i%($dodeca-n/2) != 0, 
+                    rotateY(($j - .5)*$penta-ca) 
+                    rotateX($dodeca-rax), 
+                    unquote('')) 
+                 translateY(-.75*$dodeca-h) 
+                 rotate(180deg) 
+                 translateY(-.5*$dodeca-ri);
+    }
+  }
+}
+
+@for $i from 0 to $penta-n {
+  .polyhedron__face:nth-child(#{$i + 1}) {
+    transform: rotateY($i*$penta-ca) 
+               translateZ($penta-ri) 
+               rotateX($pyramid-rax);
+    .polygon:before {
+      background-image: linear-gradient(90deg, 
+          hsla($i*360/$penta-n, 100%, 56%, $of), transparent);
+    }
+  }
+}
+
+.polygon--triangle {
+  overflow: hidden;
+  @include sp($tri-l);
+  border: solid $lineth;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  transform: rotate($tri-ra) skewY($tri-sa) scaleX($tri-sf);
+  &:before {
+    @include sp($l);
+    border: solid $lineth;
+    transform: scaleX(1/$tri-sf) skewY(-$tri-sa) rotate(-$tri-ra) 
+               translateY(-50%);
+    background: rgba(pink, $of);
+    content: '';
+  }
+}
